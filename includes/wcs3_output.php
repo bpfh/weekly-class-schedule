@@ -19,6 +19,7 @@ function wcs3_standard_shortcode( $atts ) {
 	    'layout' => 'normal',
 	    'location' => 'all',
 	    'style' => 'normal',
+        'instructor' => 'all'
 	), $atts ) );
 	
 	$wcs3_options = wcs3_load_settings();
@@ -30,7 +31,7 @@ function wcs3_standard_shortcode( $atts ) {
 	$weekdays = wcs3_get_indexed_weekdays( $abbr = TRUE, $first_day_of_week );
 	
 	// Render normal layout
-	$classes = wcs3_get_classes( $layout, $location, $mode );
+	$classes = wcs3_get_classes( $layout, $location, $instructor, $mode );
 	
 	// Location
 	$location_slug = preg_replace( "/[^A-Za-z0-9]/", '-', $location );

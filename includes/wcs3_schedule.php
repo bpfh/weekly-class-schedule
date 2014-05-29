@@ -110,9 +110,10 @@ function wcs3_get_day_schedule( $day, $location_id = NULL, $limit = NULL ) {
  * 
  * @param string $layout: 'normal', 'list', etc.
  * @param string $location
+ * @param string $instructor
  * @param string $mode: 12 or 24.
  */
-function wcs3_get_classes( $layout, $location, $mode = '12' ) {
+function wcs3_get_classes( $layout, $location, $instructor, $mode = '12' ) {
     global $wpdb;
     
     $format = ( $mode == '12' ) ? 'g:i a' : 'G:i';
@@ -142,6 +143,11 @@ function wcs3_get_classes( $layout, $location, $mode = '12' ) {
     if ( $location != 'all' ) {
         $query .= " AND l.post_title = %s";
         $query = $wpdb->prepare( $query, array( $location ) );
+    }
+    
+    if ( $instructor != 'all' ) {
+        $query .= " AND i.post_title = %s";
+        $query = $wpdb->prepare( $query, array( $instructor ) );
     }
     
     $query .= " ORDER BY s.start_hour";
