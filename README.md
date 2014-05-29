@@ -4,6 +4,8 @@ This repository contains a modified Weekly Class Schedule WordPress plugin with 
 
 Should the feature be merged upstream, this fork can go away. 
 
+See `readme.txt` for the original README.
+
 ## Installation
 
 Download the plugin package and place it in the `wp-content/plugins` directory, replacing the original Weekly Class Schedule plugin.
