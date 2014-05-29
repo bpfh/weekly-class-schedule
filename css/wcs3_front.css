@@ -1,0 +1,45 @@
+/**
+ * Styles for the Weekly Class Schedule 3.0 front-end.
+ */
+table.wcs3-schedule-normal-layout {
+    table-layout: fixed;
+    width: 100%;
+}
+.wcs-schedule-wrapper td {
+	padding: 0;
+}
+.wcs3-class-container {
+	padding: 8px;
+	position: relative;
+}
+.wcs3-class-container:hover {
+	cursor: help;
+}
+.wcs3-details-box-container {
+	display: none;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 200px;
+	padding: 8px;
+	z-index: 20;
+}
+.wcs3-abs-col-4 .wcs3-details-box-container,
+.wcs3-abs-col-5 .wcs3-details-box-container,
+.wcs3-abs-col-6 .wcs3-details-box-container {
+	right: 0;
+	left: auto;
+}
+.wcs3-qtip-data {
+	display: none;
+}
+
+.wcs3-schedule-wrapper table .wcs3-cell {
+	padding: 0;
+}
+.wcs3-no-classes {
+	margin-bottom: 20px;
+}
+.wcs3-hour-col {
+    min-width: 50px;
+}

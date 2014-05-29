@@ -1,0 +1,86 @@
+/**
+ * WCS3 admin styles
+ */
+#wcs3-schedule-management-form-wrapper {
+	float: left;
+	margin-right: 2%;
+}
+#wcs3-schedule-management-form {
+	max-width: 400px;
+    width: 40%;
+}
+#wcs3-schedule-buttons-wrapper {
+	max-width: 300px;
+	margin: 15px 0 25px;
+}
+#wcs3-ajax-text-wrapper {
+	max-width: 90%;
+	margin: 20px 0 10px;
+}
+
+td.wcs3-col-label {
+	min-width: 70px;
+	font-weight: bold;
+}
+
+#wcs3-schedule-events-list-wrapper {
+	width: 60%;
+	float: left;
+}
+#wcs3-schedule-events-list-wrapper h3 {
+	margin-top: 0;
+}
+.wcs3-ajax-loader {
+   display: none;	
+}
+.wcs3-ajax-loader img {
+	display: inline;
+	margin-bottom: -7px;
+	margin-left: 10px;
+}
+.wcs3-ajax-text {
+	margin-left: 10px;
+}
+.wcs3-admin-schedule-table {
+	margin-bottom: 20px;
+}
+#wcs3-cancel-editing-wrapper {
+	margin-top: -10px;
+	margin-bottom: 20px;
+}
+#wcs3-cancel-editing-wrapper a {
+	text-decoration: none;
+}
+.wcs3-form-message {
+	background: #070;
+	color: #fff;
+	font-weight: bold;
+	margin: 0 0 10px;
+	padding: 5px 5px;
+	text-align: center;
+	border: 1px solid #e5e5e5;
+	-webkit-box-shadow: 0 1px 1px rgba(0,0,0,.04);
+	box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+/* Settings page */
+#wcs3-options-message {
+	margin-top: 15px;
+}
+.wcs3-description {
+	font-size: 12px;
+	color: #888;
+	margin-top: 3px;
+	font-weight: normal;
+}
+.wcs3-description strong {
+	color: #666;
+}
+.colorpicker-preview {
+	display: inline-block;
+	margin-left: 10px;
+	width: 20px;
+	-webkit-border-radius: 5px;
+	border-radius: 5px;
+	border: 1px solid #aaa;
+}
