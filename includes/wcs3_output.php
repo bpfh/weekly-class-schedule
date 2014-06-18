@@ -35,7 +35,6 @@ function wcs3_standard_shortcode( $atts ) {
 	$weekdays = wcs3_get_indexed_weekdays( $abbr = TRUE, $first_day_of_week );
 	if ( $weekday == "today" ) {
 		$weekday = strtolower(date('l'));
-		echo "<pre style='color:green;'>today: "; echo var_dump($weekday); echo "</pre>";
 	}
 
 	if ( $weekday != 'all' ) {
