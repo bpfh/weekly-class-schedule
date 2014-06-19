@@ -106,6 +106,41 @@ function wcs3_get_day_schedule( $day, $location_id = NULL, $limit = NULL ) {
 }
 
 /**
+ * Generate a query clause for the given search field and needle,
+ *
+ * @param string $field: name of database field to search
+ * @param string $needle: what you're looking for - can contain alternation (|) and wildcards (%).
+ */
+function wcs3_generate_query_clause( $field, $needle ) {
+	global $wpdb;
+
+    // handle alternation
+	if (strpos($needle, '|') !== FALSE) {
+		$parts = preg_split('/\|/', $needle);
+	}
+	else {
+		$parts = array($needle);
+	}
+
+	// create subquery for each part of the alternation (or just the one)
+	$clauselets = array();
+	foreach ($parts as $part) {
+		if (strpos($part, '%') !== FALSE) {
+			$clauselet = "(" . $field . " LIKE %s)";
+		}
+		else {
+			$clauselet = "(" . $field . " = %s)";
+		}
+		$clauselet = $wpdb->prepare($clauselet, array($part));
+		array_push($clauselets, $clauselet);
+	}
+
+	// combine the query clauses (one or many) into final query
+	$clause = " AND ( " . implode(' OR ', $clauselets) . " )";
+	return $clause;
+}
+
+/**
  * Gets all the visible classes from the database including instructors and locations.
  *
  * @param string $layout: 'normal', 'list', etc.
@@ -143,18 +178,15 @@ function wcs3_get_classes( $layout, $location, $class, $instructor, $dow = 'all'
             $meta_table );
 
     if ( $location != 'all' ) {
-        $query .= " AND l.post_title = %s";
-        $query = $wpdb->prepare( $query, array( $location ) );
+		$query .= wcs3_generate_query_clause('l.post_title', $location);
     }
 
 	if ( $class != 'all' ) {
-		$query .= " AND c.post_title = %s";
-		$query = $wpdb->prepare( $query, array( $class ) );
+		$query .= wcs3_generate_query_clause('c.post_title', $class);
 	}
 
 	if ( $instructor != 'all' ) {
-		$query .= " AND i.post_title = %s";
-		$query = $wpdb->prepare( $query, array( $instructor ) );
+		$query .= wcs3_generate_query_clause('i.post_title', $instructor);
 	}
 
 	 if ( $dow === 0 ) {
