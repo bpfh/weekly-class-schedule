@@ -106,4 +106,5 @@ released under the GPLV2 license.
 
 The list2 layout and extended querying of instructors, classes, and weekdays were
 added by [Jonathan Eunice](mailto:jonathan.eunice@gmail.com), and are released
-under the same GPLv2 license.
+under the same GPLv2 license. To contribute to further development,
+[donate at GitTip](https://www.gittip.com/jeunice/).
