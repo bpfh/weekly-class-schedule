@@ -82,7 +82,21 @@ Feel free to combine wildcards and alternation:
 
 finds any classes with "yoga" *or* "fitness" in their names.
 
-Weekdays are the exception. They are currently *not* supported for either alternation or wildcard search.
+Weekdays are a bit of a special case. You can search by alternation, but not by wildcard. For example:
+
+```
+[wcs weekday="Mon|Tue"]
+```
+
+finds Monday and Tuesday classes. You can use either the full day names, or their first three letter forms (e.g. "Mon").
+The search function also understands all symbolic day names (e.g. "today," "tomorrow", and "yesterday") and
+relative dates--basically, everything that
+PHP's `strtotime()` function understands. So for example, to list all classes
+happening in the next three days, you could request:
+
+```
+[wcs weekday="today|tomorrow|+2 days"]
+```
 
 ## Credits
 

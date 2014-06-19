@@ -135,7 +135,66 @@ function wcs3_generate_query_clause( $field, $needle ) {
 		array_push($clauselets, $clauselet);
 	}
 
-	// combine the query clauses (one or many) into final query
+	// combine the query clauselets (one or many) into final query
+	$clause = " AND ( " . implode(' OR ', $clauselets) . " )";
+	return $clause;
+}
+
+
+/**
+ * Generate a query clause for the weekday field and needle. Differs
+ * from standard wcs3_generate_query_clause used by other fields in
+ * that weekday searches occur on integer values, not strings. Also,
+ * there is an apparent issue with $wpdb->prepare() when dealing with
+ * the value 0--at least as I have invoked it.
+ *
+ * @param string $field: name of database field to search
+ * @param string $needle: what you're looking for - can contain alternation (|) and wildcards (%).
+ */
+function wcs3_generate_weekday_query_clause( $field, $needle ) {
+	global $wpdb;
+
+    // handle alternation
+	if (strpos($needle, '|') !== FALSE) {
+		$parts = preg_split('/\|/', $needle);
+	}
+	else {
+		$parts = array($needle);
+	}
+
+	// Get indexed weekday array
+	$wcs3_options = wcs3_load_settings();
+	$first_day_of_week = $wcs3_options['first_day_of_week'];
+	$weekdays = wcs3_get_indexed_weekdays( $abbr = TRUE, $first_day_of_week );
+
+	// Convert given day names--which can be full day names (e.g. "Monday"),
+	// three-letter truncations (e.g. "Mon"), or the fixed string "today"--
+	// into their respective day of week numbers. Note that conversion search
+	// done on first three characters of the day name, because that's what
+	// the data from wcs3_get_indexed_weekdays() returns.
+
+	$daynumbers = array();
+	foreach ($parts as $dayname) {
+		$dayname = strtolower($dayname);
+		$weekday_needle = substr(ucfirst($dayname), 0, 3);
+		$daynumber = array_search( $weekday_needle, array_keys($weekdays) );
+		if ( $daynumber === FALSE ) {
+			// assume it's something like "today" or "tomorrow" that needs more parsing
+			$dayname = strtolower(date('l', strtotime($dayname)));
+			$weekday_needle = substr(ucfirst($dayname), 0, 3);
+			$daynumber = array_search( $weekday_needle, array_keys($weekdays) );
+		}
+		array_push($daynumbers, $daynumber);
+	}
+
+	// create subquery for each part of the alternation (or just the one)
+	$clauselets = array();
+	foreach ($daynumbers as $daynum) {
+		$clauselet = "(" . $field . " = " . $daynum . ")";
+		array_push($clauselets, $clauselet);
+	}
+
+	// combine the query clauselets (one or many) into final clause
 	$clause = " AND ( " . implode(' OR ', $clauselets) . " )";
 	return $clause;
 }
@@ -189,14 +248,8 @@ function wcs3_get_classes( $layout, $location, $class, $instructor, $dow = 'all'
 		$query .= wcs3_generate_query_clause('i.post_title', $instructor);
 	}
 
-	 if ( $dow === 0 ) {
-		 // special case for dow == 0 because prepare below doesnt work otherwise
-		 // (for reasons that are probably trivial, but that are opaque to me)
-		 $query .= " AND s.weekday = 0";
-	 }
-	else if ( $dow != 'all' ) {
-		$query .= " AND s.weekday = %d";
-		$query = $wpdb->prepare( $query, array( $dow ) );
+	if ($dow != "all") {
+		$query .= wcs3_generate_weekday_query_clause('s.weekday', $dow);
 	}
 
     $query .= " ORDER BY s.start_hour";

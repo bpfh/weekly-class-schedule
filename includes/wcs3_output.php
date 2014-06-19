@@ -26,22 +26,9 @@ function wcs3_standard_shortcode( $atts ) {
 	), $atts ) );
 
 	$wcs3_options = wcs3_load_settings();
-
 	$first_day_of_week = $wcs3_options['first_day_of_week'];
 	$mode = ( $wcs3_options['24_hour_mode'] == 'yes' ) ? '24' : '12';
-
-
-	// Get indexed weekday array
 	$weekdays = wcs3_get_indexed_weekdays( $abbr = TRUE, $first_day_of_week );
-	if ( $weekday == "today" ) {
-		$weekday = strtolower(date('l'));
-	}
-
-	if ( $weekday != 'all' ) {
-		// convert string weekday to day of week
-		$weekday_needle = substr(ucfirst(strtolower($weekday)), 0, 3);
-		$weekday = array_search( $weekday_needle, array_keys($weekdays) );
-	}
 
 	// Render normal layout
 	$classes = wcs3_get_classes( $layout, $location, $class, $instructor, $weekday, $mode );
