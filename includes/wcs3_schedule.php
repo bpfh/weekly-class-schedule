@@ -5,14 +5,14 @@
 
 /**
  * Generates the day table for admin use.
- * 
+ *
  * @param int $day: the weekday (sunday = 0, monday = 1)
  */
 function wcs3_render_day_table( $day ) {
     $day_data = wcs3_get_day_schedule( $day );
-    
+
     $output = '<div class="wcs3-day-content-wrapper">';
-    
+
     if ( $day_data ) {
         $output .= '<table id="wcs3-admin-table-day-' . $day . '" class="widefat wcs3-admin-schedule-table">';
         $output .= '<tr>
@@ -25,7 +25,7 @@ function wcs3_render_day_table( $day ) {
             <th>' . __( 'Delete', 'wcs3') . '</th>
             <th>' . __( 'Edit', 'wcs3') . '</th>
         </tr>';
-        
+
         foreach ( $day_data as $class ) {
         	$output .= '<tr>';
         	foreach ( $class as $key => $value ) {
@@ -33,59 +33,59 @@ function wcs3_render_day_table( $day ) {
         	        $output .= "<td>$value</td>";
         	    }
         		else {
-        		    $output .= '<td><a href="#delete" class="wcs3-delete-button wcs3-action-button-day-' . $day . '" 
+        		    $output .= '<td><a href="#delete" class="wcs3-delete-button wcs3-action-button-day-' . $day . '"
         		                id="delete-entry-' . $value . '">' . __( 'delete', 'wcs3') . '</a></td>';
-        		    $output .=  '<td><a href="#" class="wcs3-edit-button wcs3-action-button-day-' . $day . '" 
-        		                id="edit-entry-' . $value . '">' . __( 'edit', 'wcs3' ) . '</a>';  
+        		    $output .=  '<td><a href="#" class="wcs3-edit-button wcs3-action-button-day-' . $day . '"
+        		                id="edit-entry-' . $value . '">' . __( 'edit', 'wcs3' ) . '</a>';
         		}
         	}
-        
+
         	$output .= '</tr>';
         }
-        
-        
+
+
         $output .= '</table>';
     }
     else {
         $output .= '<div class="wcs3-no-classes"><p>' . __( 'No classes', 'wcs3' ) . '</p></div>';
     }
-   
+
     $output .= '</div>'; // day-content-wrapper
     return $output;
 }
 
 /**
  * Returns the database data relevant for the provided weekday.
- * 
+ *
  * @param int $day: the weekday (sunday = 0, monday = 1)
  */
 function wcs3_get_day_schedule( $day, $location_id = NULL, $limit = NULL ) {
     global $wpdb;
-    
+
     $wcs3_settings = wcs3_load_settings();
-    
+
     $format = ( $wcs3_settings['24_hour_mode'] == 'yes' ) ? 'G:i' : 'g:i a';
-        
+
     $table = wcs3_get_table_name();
     $results = array();
-    
+
     $query = "SELECT * FROM $table WHERE weekday = %d ";
     $query_arr = array( $day );
-    
+
     if ( $location_id !== NULL ) {
         $query .= "AND location_id = %d ";
         $query_arr[] = $location_id;
     }
-    
+
     $query .= "ORDER BY start_hour ";
-    
+
     if ( $limit !== NULL ) {
         $query .= "LIMIT %d";
         $query_arr[] = $limit;
     }
-    
+
     $r = $wpdb->get_results( $wpdb->prepare( $query, $query_arr ) );
-    
+
     if ( !empty( $r ) ) {
         foreach ( $r as $entry ) {
             $results[] = array(
@@ -106,61 +106,166 @@ function wcs3_get_day_schedule( $day, $location_id = NULL, $limit = NULL ) {
 }
 
 /**
+ * Generate a query clause for the given search field and needle,
+ *
+ * @param string $field: name of database field to search
+ * @param string $needle: what you're looking for - can contain alternation (|) and wildcards (%).
+ */
+function wcs3_generate_query_clause( $field, $needle ) {
+	global $wpdb;
+
+    // handle alternation
+	if (strpos($needle, '|') !== FALSE) {
+		$parts = preg_split('/\|/', $needle);
+	}
+	else {
+		$parts = array($needle);
+	}
+
+	// create subquery for each part of the alternation (or just the one)
+	$clauselets = array();
+	foreach ($parts as $part) {
+		if (strpos($part, '%') !== FALSE) {
+			$clauselet = "(" . $field . " LIKE %s)";
+		}
+		else {
+			$clauselet = "(" . $field . " = %s)";
+		}
+		$clauselet = $wpdb->prepare($clauselet, array($part));
+		array_push($clauselets, $clauselet);
+	}
+
+	// combine the query clauselets (one or many) into final query
+	$clause = " AND ( " . implode(' OR ', $clauselets) . " )";
+	return $clause;
+}
+
+
+/**
+ * Generate a query clause for the weekday field and needle. Differs
+ * from standard wcs3_generate_query_clause used by other fields in
+ * that weekday searches occur on integer values, not strings. Also,
+ * there is an apparent issue with $wpdb->prepare() when dealing with
+ * the value 0--at least as I have invoked it.
+ *
+ * @param string $field: name of database field to search
+ * @param string $needle: what you're looking for - can contain alternation (|) and wildcards (%).
+ */
+function wcs3_generate_weekday_query_clause( $field, $needle ) {
+	global $wpdb;
+
+    // handle alternation
+	if (strpos($needle, '|') !== FALSE) {
+		$parts = preg_split('/\|/', $needle);
+	}
+	else {
+		$parts = array($needle);
+	}
+
+	// Get indexed weekday array
+	$wcs3_options = wcs3_load_settings();
+	$first_day_of_week = $wcs3_options['first_day_of_week'];
+	$weekdays = wcs3_get_indexed_weekdays( $abbr = TRUE, $first_day_of_week );
+
+	// Convert given day names--which can be full day names (e.g. "Monday"),
+	// three-letter truncations (e.g. "Mon"), or the fixed string "today"--
+	// into their respective day of week numbers. Note that conversion search
+	// done on first three characters of the day name, because that's what
+	// the data from wcs3_get_indexed_weekdays() returns.
+
+	$daynumbers = array();
+	foreach ($parts as $dayname) {
+		$dayname = strtolower($dayname);
+		$weekday_needle = substr(ucfirst($dayname), 0, 3);
+		$daynumber = array_search( $weekday_needle, array_keys($weekdays) );
+		if ( $daynumber === FALSE ) {
+			// assume it's something like "today" or "tomorrow" that needs more parsing
+			$dayname = strtolower(date('l', strtotime($dayname)));
+			$weekday_needle = substr(ucfirst($dayname), 0, 3);
+			$daynumber = array_search( $weekday_needle, array_keys($weekdays) );
+		}
+		array_push($daynumbers, $daynumber);
+	}
+
+	// create subquery for each part of the alternation (or just the one)
+	$clauselets = array();
+	foreach ($daynumbers as $daynum) {
+		$clauselet = "(" . $field . " = " . $daynum . ")";
+		array_push($clauselets, $clauselet);
+	}
+
+	// combine the query clauselets (one or many) into final clause
+	$clause = " AND ( " . implode(' OR ', $clauselets) . " )";
+	return $clause;
+}
+
+/**
  * Gets all the visible classes from the database including instructors and locations.
- * 
+ *
  * @param string $layout: 'normal', 'list', etc.
- * @param string $location
- * @param string $instructor
+ * @param string $location: name or 'all'
+ * @param string $class: name or 'all'
+ * @param string $instructor: name or 'all'
+ * @param string $dow: numerical day of week (0-6) or 'all'
  * @param string $mode: 12 or 24.
  */
-function wcs3_get_classes( $layout, $location, $instructor, $mode = '12' ) {
+function wcs3_get_classes( $layout, $location, $class, $instructor, $dow = 'all', $mode = '12' ) {
     global $wpdb;
-    
+
     $format = ( $mode == '12' ) ? 'g:i a' : 'G:i';
-    
+
     $schedule_table = wcs3_get_table_name();
     $posts_table = $wpdb->prefix . 'posts';
     $meta_table = $wpdb->prefix . 'postmeta';
-    
-    $query = "SELECT 
+
+    $query = "SELECT
                 c.post_title AS class_title, c.post_content AS class_desc,
                 i.post_title AS instructor_title, i.post_content AS instructor_desc,
                 l.post_title AS location_title, l.post_content AS location_desc,
-                s.weekday, s.start_hour, s.end_hour, 
+                s.weekday, s.start_hour, s.end_hour,
               s.notes FROM $schedule_table s
               INNER JOIN $posts_table c ON s.class_id = c.ID
               INNER JOIN $posts_table i ON s.instructor_id = i.ID
               INNER JOIN $posts_table l ON s.location_id = l.ID
               WHERE s.visible = 1";
-    
-    $query = apply_filters( 
-            'wcs3_filter_get_classes_query', 
-            $query, 
+
+    $query = apply_filters(
+            'wcs3_filter_get_classes_query',
+            $query,
             $schedule_table,
             $posts_table,
             $meta_table );
-    
+
     if ( $location != 'all' ) {
-        $query .= " AND l.post_title = %s";
-        $query = $wpdb->prepare( $query, array( $location ) );
+		$query .= wcs3_generate_query_clause('l.post_title', $location);
     }
-    
-    if ( $instructor != 'all' ) {
-        $query .= " AND i.post_title = %s";
-        $query = $wpdb->prepare( $query, array( $instructor ) );
-    }
-    
+
+	if ( $class != 'all' ) {
+		$query .= wcs3_generate_query_clause('c.post_title', $class);
+	}
+
+	if ( $instructor != 'all' ) {
+		$query .= wcs3_generate_query_clause('i.post_title', $instructor);
+	}
+
+	if ($dow != "all") {
+		$query .= wcs3_generate_weekday_query_clause('s.weekday', $dow);
+	}
+
     $query .= " ORDER BY s.start_hour";
-    
+
+	// for debugging, can determine exactly what query is being executed
+	// echo "<pre>"; echo var_dump($query); echo "</pre>";
+
     $results = $wpdb->get_results( $query );
     $grouped = array();
-    
+
     if ( $results ) {
         foreach ( $results as $class ) {
             // Prep CSS class name
             wcs3_format_class_object( $class, $format );
-            
-            if ( $layout == 'list' ) {
+
+            if ( $layout == 'list' || $layout == 'list2') {
             	$grouped[$class->weekday][] = $class;
             }
             else {
@@ -168,22 +273,22 @@ function wcs3_get_classes( $layout, $location, $instructor, $mode = '12' ) {
             }
         }
     }
-    
+
     return $grouped;
 }
 
 /**
  * Formats the time properties of a class object as returned from the database.
- * 
+ *
  * @param object $class: reference to class object.
  * @param string $format: time format (e.g. 'g:i a').
  */
-function wcs3_format_class_object( &$class, $format ) {	
+function wcs3_format_class_object( &$class, $format ) {
     $class->start_hour_css = substr( str_replace( ':', '-', $class->start_hour), 0, 5);
     $class->end_hour_css = substr( str_replace( ':', '-', $class->end_hour), 0, 5);
-    
+
     $class->start_hour = date( $format, strtotime( $class->start_hour ) );
     $class->end_hour = date( $format, strtotime( $class->end_hour ) );
-    
+
     $class = apply_filters( 'wcs3_format_class', $class );
 }
